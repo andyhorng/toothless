@@ -1,0 +1,8 @@
+{:deps true
+ :builds
+ {:dev {:target :node-script
+        :main user/dev
+        :output-to "lib.js"}
+  :test {:target :node-test
+         :output-to "out/test.js"
+         :autorun true}}}

@@ -1,0 +1,15 @@
+/target
+/lib
+/codox
+/classes
+/checkouts
+/out
+/node_modules
+package-lock.json
+lib.js
+pom.xml
+pom.xml.asc
+*.jar
+*.class
+.lein-*
+.nrepl-port
