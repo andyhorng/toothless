@@ -90,7 +90,7 @@
     (is (= (html [:div.foo {:class [:bar :box]} "baz"])
            "<div class=\"foo bar box\">baz</div>"))))
 
-#_(deftest compiled-tags
+(deftest compiled-tags
   (testing "tag content can be vars"
     (is (= (let [x "foo"] (html [:span x])) "<span>foo</span>")))
   (testing "tag content can be forms"

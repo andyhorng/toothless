@@ -32,12 +32,31 @@
     (catch js/Error _
       (throw (new js/Error "Invalid tag")))))
 
+
 (defn normalize [x]
   (cond
     (vector? x) (let [[tag id cls] (normalize-tag (first x))
-                      attrs (cond-> (if (map? (second x)) (second x) {})
-                              (some? id) (assoc :id id)
-                              (some? cls) (assoc :class (->> (string/replace cls "." " "))))
+                      attrs (cond-> {} 
+                              (map? (second x)) (merge (second x))
+                              (some? id) (update :id #(if % % id))
+                              (some? cls) (update :class 
+                                                  (fn [attr-cls]
+                                                    (let [tag-cls (->> (string/replace cls "." " "))]
+                                                      (cond
+
+                                                        (and (coll? attr-cls)
+                                                             (seq attr-cls)) 
+                                                        (str
+                                                          tag-cls
+                                                          " "
+                                                          (string/join " " (map ->str attr-cls)))
+                                                        (and
+                                                          (string? attr-cls)
+                                                          (not
+                                                            (string/blank? attr-cls)))
+                                                        (str tag-cls " " attr-cls)
+                                                        :else tag-cls)))))
+
                       content (nthrest x (if (map? (second x)) 2 1))]
                   [tag attrs (map normalize content)])
     (sequential? x) (map normalize x)
@@ -52,7 +71,7 @@
                   (true? value) (->str attr)
                   (not value) nil
                   :else (str (->str attr) "=" "\"" (escape-html (->str value)) "\""))))
-         (filter identity)
+         (remove nil?)
          (string/join " "))))
 
 (comment
@@ -75,6 +94,7 @@
 
 
 (comment
+  (html [:div.foo {:class "bar"} "baz"])
   (html (normalize (vector [:p "a"] [:p "b"])))
   (html [:body [:p] [:br]])
   (html [:div.foo.bar (str "bar" "baz")]))
