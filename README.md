@@ -7,6 +7,7 @@ My hiccup implementation for ClojureScript.
 
 * integration with `promesa`
 * simple
+* only html
 
 
 ## Development
