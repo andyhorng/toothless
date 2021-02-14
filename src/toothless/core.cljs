@@ -32,35 +32,25 @@
     (catch js/Error _
       (throw (new js/Error "Invalid tag")))))
 
-
-(defn normalize [x]
-  (cond
-    (vector? x) (let [[tag id cls] (normalize-tag (first x))
-                      attrs (cond-> {} 
-                              (map? (second x)) (merge (second x))
-                              (some? id) (update :id #(if % % id))
-                              (some? cls) (update :class 
-                                                  (fn [attr-cls]
-                                                    (let [tag-cls (->> (string/replace cls "." " "))]
-                                                      (cond
-
-                                                        (and (coll? attr-cls)
-                                                             (seq attr-cls)) 
-                                                        (str
-                                                          tag-cls
-                                                          " "
-                                                          (string/join " " (map ->str attr-cls)))
-                                                        (and
-                                                          (string? attr-cls)
-                                                          (not
-                                                            (string/blank? attr-cls)))
-                                                        (str tag-cls " " attr-cls)
-                                                        :else tag-cls)))))
-
-                      content (nthrest x (if (map? (second x)) 2 1))]
-                  [tag attrs (map normalize content)])
-    (sequential? x) (map normalize x)
-    :else x))
+(defn merge-attrs [attrs id cls]
+  (cond-> attrs
+    (some? id) (update :id #(if % % id))
+    (some? cls) (update :class 
+                        (fn [attr-cls]
+                          (let [tag-cls (->> (string/replace cls "." " "))]
+                            (cond
+                              (and (coll? attr-cls)
+                                   (seq attr-cls)) 
+                              (str
+                                tag-cls
+                                " "
+                                (string/join " " (map ->str attr-cls)))
+                              (and
+                                (string? attr-cls)
+                                (not
+                                  (string/blank? attr-cls)))
+                              (str tag-cls " " attr-cls)
+                              :else tag-cls))))))
 
 (defn render-attrs [attrs]
   (when (seq attrs)
@@ -79,11 +69,15 @@
 
 (defn html [x]
   (cond
-    (vector? x) (let [[tag attrs content] (normalize x)
-                      attrs-str (render-attrs attrs)]
+    (vector? x) (let [[tag id cls] (normalize-tag (first x))
+                      attrs (merge-attrs (if (map? (second x)) (second x) {}) id cls)
+                      attrs-str (render-attrs attrs)
+                      content (if (map? (second x))
+                                (nthrest x 2)
+                                (nthrest x 1))]
                   (if (void-tags tag)
-                    (str "<" tag (if (string/blank? attrs-str) "" " ") attrs-str ">")
-                    (str "<" tag (if (string/blank? attrs-str) "" " ") attrs-str ">" 
+                    (str "<" tag (when-not (string/blank? attrs-str) " ") attrs-str ">")
+                    (str "<" tag (when-not (string/blank? attrs-str) " ") attrs-str ">" 
                          (->> content 
                               (map html) 
                               (string/join "")) 
@@ -92,9 +86,8 @@
     (keyword? x) (name x)
     :else x))
 
-
 (comment
+  (html [:div {:class nil} "baz"])
   (html [:div.foo {:class "bar"} "baz"])
-  (html (normalize (vector [:p "a"] [:p "b"])))
   (html [:body [:p] [:br]])
   (html [:div.foo.bar (str "bar" "baz")]))
