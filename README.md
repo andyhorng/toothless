@@ -5,10 +5,15 @@ My hiccup implementation for ClojureScript.
 
 ## Features
 
-* integration with `promesa`
+* integrate with `promesa`
 * simple
-* only html
+* only html mode
+* no macros
 
+
+## Getting Started
+
+See `test` for usage
 
 ## Development
 
