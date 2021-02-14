@@ -33,6 +33,6 @@
   (tufte/add-basic-println-handler! {})
   (profile
     {}
-    (dotimes [_ 10]
-      (p :hiccups (hs/render-html (gen-test-hiccup 10)))
-      (p :toothless (c/html (gen-test-hiccup 10))))))
+    (dotimes [_ 100]
+      (p :hiccups (hs/render-html (gen-test-hiccup 7)))
+      (p :toothless (c/html (gen-test-hiccup 7))))))

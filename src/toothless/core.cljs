@@ -1,5 +1,6 @@
 (ns toothless.core
-  (:require [clojure.string :as string]))
+  (:require [clojure.string :as string]
+            [promesa.core :as p]))
 
 (def re-tag #"([^\s\.#]+)(?:#([^\s\.#]+))?(?:\.([^\s#]+))?")
 
@@ -67,26 +68,60 @@
 (comment
   (render-attrs {:class nil}))
 
+
+(defn parse-tag [v]
+  (let [[tag id cls] (normalize-tag (first v))
+        attrs (merge-attrs (if (map? (second v)) (second v) {}) id cls)
+        content (if (map? (second v))
+                  (nthrest v 2)
+                  (nthrest v 1))]
+    [tag attrs content]))
+
+
 (defn html [x]
   (cond
-    (vector? x) (let [[tag id cls] (normalize-tag (first x))
-                      attrs (merge-attrs (if (map? (second x)) (second x) {}) id cls)
-                      attrs-str (render-attrs attrs)
-                      content (if (map? (second x))
-                                (nthrest x 2)
-                                (nthrest x 1))]
+    (vector? x) (let [[tag attrs content] (parse-tag x)
+                      attrs-str (render-attrs attrs)]
                   (if (void-tags tag)
                     (str "<" tag (when-not (string/blank? attrs-str) " ") attrs-str ">")
                     (str "<" tag (when-not (string/blank? attrs-str) " ") attrs-str ">" 
-                         (->> content 
-                              (map html) 
-                              (string/join "")) 
+                         (html content) 
                          "</" tag ">")))
     (sequential? x) (string/join "" (map html x))
     (keyword? x) (name x)
     :else x))
 
+(defn phtml [px]
+  (-> px
+      (p/then (fn [x]
+                (cond
+                  (vector? x) 
+                  (let [[tag attrs content] (parse-tag x)
+                        attrs-str (render-attrs attrs)]
+                    (if (void-tags tag)
+                      (str "<" tag (when-not (string/blank? attrs-str) " ") attrs-str ">")
+                      (-> (phtml content)
+                          (p/then #(str "<" tag (when-not (string/blank? attrs-str) " ") attrs-str ">" 
+                                        %
+                                        "</" tag ">")))))
+                  (sequential? x)
+                  (-> (p/all (mapv phtml x))
+                      (p/then #(string/join "" %)))
+                  :else (html x))))))
+
 (comment
+  (->
+    (phtml [:h1 "Hello"
+            (p/delay 1000
+                     [:h2 "World"])
+            (p/delay 1000
+                     [:h2 "!"])
+            (for [x (range 20)]
+              [:h2 (p/delay x "!")])])
+    (p/then prn)
+    (p/catch prn))
+
+
   (html [:div {:class nil} "baz"])
   (html [:div.foo {:class "bar"} "baz"])
   (html [:body [:p] [:br]])

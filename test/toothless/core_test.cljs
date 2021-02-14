@@ -1,6 +1,7 @@
 (ns toothless.core-test
-  (:require [clojure.test :refer [deftest is testing]]
-            [toothless.core :refer [html]]))
+  (:require [clojure.test :refer [deftest is testing async]]
+            [toothless.core :refer [html phtml]]
+            [promesa.core :as p]))
 
 (deftest tag-names
   (testing "basic tags"
@@ -126,3 +127,19 @@
     (let [x "attr-class"]
       (is  (= (html [:div.tag-class {:class x}])
               "<div class=\"tag-class attr-class\"></div>")))))
+
+
+(deftest promisa
+  (testing "handle nested promises"
+    (async done
+           (->
+             (phtml [:div
+                     (p/do! 
+                       [:h1 (p/do! "Foo")])
+                     (for [x (range 3)]
+                       (p/do!
+                         [:h1 (p/do! x)]))])
+             (p/then (fn [html]
+                       (is (= html
+                              "<div><h1>Foo</h1><h1>0</h1><h1>1</h1><h1>2</h1></div>"))))
+             (p/then done)))))
